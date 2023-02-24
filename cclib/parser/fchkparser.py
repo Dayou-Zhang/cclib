@@ -19,16 +19,30 @@ from cclib.parser import logfileparser
 from cclib.parser import utils
 
 SHELL_ORBITALS = {
-    0: ['S'],
-    1: ['PX', 'PY', 'PZ'],
-    -1: ['S', 'PX', 'PY', 'PZ'],
-    2: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'],
-    -2: ['D1', 'D2', 'D3', 'D4', 'D5'],
-    3:  ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10'],
-    -3: ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7'],
-    4: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11', 'G12','G13'],
-    -4: ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9']
-
+     0: ['S'],
+    -1: ['S', 'PX','PY','PZ'],
+     1: ['PX', 'PY', 'PZ'],
+    -2: ['D0', 'D1+', 'D1-', 'D2+', 'D2-'],
+     2: ['DXX', 'DYY', 'DZZ', 'DXY', 'DXZ', 'DYZ'],
+    -3: ['F0', 'F1+', 'F1-', 'F2+', 'F2-', 'F3+', 'F3-'],
+     3: ['FXXX', 'FYYY', 'FZZZ', 'FXYY', 'FXXY', 'FXXZ', 'FXZZ', 'FYZZ',
+         'FYYZ', 'FXYZ'],
+    -4: ['G0', 'G1+', 'G1-', 'G2+', 'G2-', 'G3+', 'G3-', 'G4+', 'G4-'],
+     4: ['GZZZZ', 'GYZZZ', 'GYYZZ', 'GYYYZ', 'GYYYY', 'GXZZZ', 'GXYZZ',
+         'GXYYZ', 'GXYYY', 'GXXZZ', 'GXXYZ', 'GXXYY', 'GXXXZ', 'GXXXY',
+         'GXXXX'],
+    -5: ['H0', 'H1+', 'H1-', 'H2+', 'H2-', 'H3+', 'H3-', 'H4+', 'H4-',
+         'H5+', 'H5-'],
+     5: ['HZZZZZ', 'HYZZZZ', 'HYYZZZ', 'HYYYZZ', 'HYYYYZ', 'HYYYYY', 'HXZZZZ',
+         'HXYZZZ', 'HXYYZZ', 'HXYYYZ', 'HXYYYY', 'HXXZZZ', 'HXXYZZ', 'HXXYYZ',
+         'HXXYYY', 'HXXXZZ', 'HXXXYZ', 'HXXXYY', 'HXXXXZ', 'HXXXXY', 'HXXXXX'],
+    -6: ['I0', 'I1+', 'I1-', 'I2+', 'I2-', 'I3+', 'I3-', 'I4+', 'I4-', 'I5+',
+         'I5-', 'I6+', 'I6-'],
+     6: ['IZZZZZZ', 'IYZZZZZ', 'IYYZZZZ', 'IYYYZZZ', 'IYYYYZZ', 'IYYYYYZ',
+         'IYYYYYY', 'IXZZZZZ', 'IXYZZZZ', 'IXYYZZZ', 'IXYYYZZ', 'IXYYYYZ',
+         'IXYYYYY', 'IXXZZZZ', 'IXXYZZZ', 'IXXYYZZ', 'IXXYYYZ', 'IXXYYYY',
+         'IXXXZZZ', 'IXXXYZZ', 'IXXXYYZ', 'IXXXYYY', 'IXXXXZZ', 'IXXXXYZ',
+         'IXXXXYY', 'IXXXXXZ', 'IXXXXXY', 'IXXXXXX']
 }
 
 SHELL_START = {
