@@ -45,6 +45,30 @@ SHELL_ORBITALS = {
          'IXXXXYY', 'IXXXXXZ', 'IXXXXXY', 'IXXXXXX']
 }
 
+SHELL_ML = {
+     0: [0],
+    -1: [0, 1, -1, 0],
+     1: [1, -1, 0],
+    -2: [0, 1, -1, 2, -2],
+    # Treat XYZ as two binary digits: X -> 0b01, Y -> 0b10, Z -> 0b11
+    # To make cartesian easy to distinguish from spherical, all values
+    #    are <<ed by 1
+    # e.g. XYZ -> 0b0110110 -> 54
+     2: [10, 20, 30, 12, 14, 22],
+    -3: [0, 1, -1, 2, -2, 3, -3],
+     3: [42, 84, 126, 52, 44, 46, 62, 94, 86, 54],
+    -4: [0, 1, -1, 2, -2, 3, -3, 4, -4],
+     4: [510, 382, 350, 342, 340, 254, 222, 214, 212, 190, 182, 180, 174,
+         172, 170],
+    -5: [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5],
+     5: [2046, 1534, 1406, 1374, 1366, 1364, 1022, 894, 862, 854, 852, 766,
+         734, 726, 724, 702, 694, 692, 686, 684, 682],
+    -6: [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6],
+     6: [8190, 6142, 5630, 5502, 5470, 5462, 5460, 4094, 3582, 3454, 3422,
+         3414, 3412, 3070, 2942, 2910, 2902, 2900, 2814, 2782, 2774, 2772,
+         2750, 2742, 2740, 2734, 2732, 2730]
+}
+
 SHELL_START = {
     0: 1,
     1: 2,
@@ -52,8 +76,16 @@ SHELL_START = {
     2: 3,
     -2: 3,
     3: 4,
-    -3: 4
+    -3: 4,
+    4: 5,
+    -4: 5,
+    5: 6,
+    -5: 6,
+    6: 7,
+    -6: 7
 }
+
+SHELL_LABELS = "SPDFGHI"
 
 
 def _shell_to_orbitals(type, offset):
@@ -301,11 +333,20 @@ class FChk(logfileparser.Logfile):
 
         # e.g.: Number of primitives per shell             I   N=          28
         next(inputfile)
-        self._parse_block(inputfile, count, int, 'Atomic Orbital Names')
+        nprimitives = self._parse_block(inputfile, count, int, 'Atomic Orbital Names')
 
         # e.g. Shell to atom map                          I   N=          28
         next(inputfile)
         shell_map = self._parse_block(inputfile, count, int, 'Atomic Orbital Names')
+
+        # e.g. Primitive exponents                        R   N=          12
+        next(inputfile)
+        count2 = sum(nprimitives)
+        exponents = self._parse_block(inputfile, count2, float, 'Atomic Orbital Names')
+
+        # e.g. Contraction coefficients                   R   N=          12
+        next(inputfile)
+        contraction = self._parse_block(inputfile, count2, float, 'Atomic Orbital Names')
 
         elements = (self.table.element[x] for x in self.atomnos)
         atom_labels = [f"{y}{x}" for x, y in enumerate(elements, 1)]
@@ -316,6 +357,14 @@ class FChk(logfileparser.Logfile):
         orbitals = _shell_to_orbitals(shell_types[0], shell_offset)
         aonames = [f"{atom_labels[atom]}_{x}" for x in orbitals]
         atombasis = [list(range(len(orbitals)))]
+        aoqnums = [(atom, 0, 0)]
+        nprimitives_iter = iter(nprimitives)
+        exponents_iter = iter(exponents)
+        contraction_iter = iter(contraction)
+        gshell = []
+        for _ in range(next(nprimitives_iter)):
+            gshell.append((next(exponents_iter), next(contraction_iter)))
+        gbasis = [[('S', gshell)]]
 
         # get rest
         for i in range(1, len(shell_types)):
@@ -329,14 +378,22 @@ class FChk(logfileparser.Logfile):
             if atom != shell_map[i - 1] - 1:
                 shell_offset = 0
                 atombasis.append([])
+                gbasis.append([])
 
             # determine if we've changed shell type (e.g. from S to P)
             if _type != shell_types[i - 1]:
                 shell_offset = 0
 
+            gshell = []
+            for _ in range(next(nprimitives_iter)):
+                gshell.append((next(exponents_iter), next(contraction_iter)))
+            gbasis[-1].append((SHELL_LABELS[abs(_type)], gshell))
+
             orbitals = _shell_to_orbitals(_type, shell_offset)
             aonames.extend([f"{atom_labels[atom]}_{x}" for x in orbitals])
             atombasis[-1].extend(list(range(basis_offset, basis_offset + len(orbitals))))
+            for ml in SHELL_ML[_type]:
+                aoqnums.append((atom, abs(_type), ml))
 
         assert (
             len(aonames) == self.nbasis
@@ -344,9 +401,16 @@ class FChk(logfileparser.Logfile):
         self.set_attribute("aonames", aonames)
 
         assert (
+            len(aoqnums) == self.nbasis
+        ), f"Length of aoqnums != nbasis: {len(aoqnums)} != {self.nbasis}"
+        self.set_attribute("aoqnums", aoqnums)
+
+        assert (
             len(atombasis) == self.natom
         ), f"Length of atombasis != natom: {len(atombasis)} != {self.natom}"
         self.set_attribute("atombasis", atombasis)
+
+        self.set_attribute("gbasis", gbasis)
 
     def after_parsing(self):
         """Correct data or do parser-specific validation after parsing is finished."""

@@ -25,6 +25,7 @@ class ccData:
     Description of cclib attributes:
         aonames -- atomic orbital names (list of strings)
         aooverlaps -- atomic orbital overlap matrix (array[2])
+        aoqnums -- atomic quantum numbers names (list of int tuples)
         atombasis -- indices of atomic orbitals on each atom (list of lists)
         atomcharges -- atomic partial charges (dict of arrays[1])
         atomcoords -- atom coordinates (array[3], angstroms)
@@ -107,6 +108,7 @@ class ccData:
     # 'TBD' - To Be Decided are the key names of attributes which haven't been included in the cjson format
     _attributes = {
        "aonames":          Attribute(list,             'names',                       'atoms:orbitals'),
+       "aoqnums":          Attribute(list,             'qnums',                       'atoms:orbitals'),
        "aooverlaps":       Attribute(numpy.ndarray,    'overlaps',                    'properties:orbitals'),
        "atombasis":        Attribute(list,             'indices',                     'atoms:orbitals'),
        "atomcharges":      Attribute(dict,             'partial charges',             'properties'),
