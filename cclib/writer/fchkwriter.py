@@ -110,6 +110,8 @@ def write(filename, data, title=None, jobtype=None, method_name=None, basis_name
                     for e, c in primitives:
                         exponents.append(e)
                         contraction.append(c)
+            write_scalar_record(f, 'Number of contracted shells', len(shell_types))
+            write_scalar_record(f, 'Number of primitive shells', len(exponents))
             write_array_record(f, 'Shell types', shell_types)
             write_array_record(f, 'Number of primitives per shell', nprimitives)
             write_array_record(f, 'Shell to atom map', shell_map)
