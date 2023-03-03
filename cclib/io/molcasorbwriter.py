@@ -53,10 +53,11 @@ class MolcasOrb(filewriter.Writer):
             lines.append('\n')
 
             try:
-                mo_energy = data.moenergies
+                mo_energy = data.moenergies[0]
             except AttributeError:
                 mo_energy = numpy.zeros(nbasis)
             lines.append('#ONE\n* ONE ELECTRON ENERGIES\n ')
             lines.append(numpy.array2string(mo_energy, max_line_width=122, formatter={'float_kind':lambda x: "%11.4E" % x})[1:-1])
             lines.append('\n')
+        return ''.join(lines)
 
