@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2017, the cclib development team
+# Copyright (c) 2023, the cclib development team
 #
 # This file is part of cclib (http://cclib.github.io) and is distributed under
 # the terms of the BSD 3-Clause License.
@@ -14,7 +14,7 @@ from cclib.io import filewriter
 class MolcasOrb(filewriter.Writer):
     """A writer for OpenMolcas Orb files."""
 
-    def __init__(self, ccdata, *args, **kwargs):
+    def __init__(self, ccdata, title=None, *args, **kwargs):
         """Initialize the MolcasOrb writer object.
 
         Inputs:
@@ -23,11 +23,13 @@ class MolcasOrb(filewriter.Writer):
         super().__init__(ccdata, *args, **kwargs)
 
         self.required_attrs = ('nbasis', 'mocoeffs')
+        self.title = title
 
     def generate_repr(self):
         data = self.ccdata
         nbasis = data.nbasis
-        if self.jobfilename is None:
+        title = self.title
+        if title is None:
             title = 'Untitled Orbital'
         lines = []
         with numpy.printoptions(threshold=numpy.inf):
