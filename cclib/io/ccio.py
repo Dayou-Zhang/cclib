@@ -40,6 +40,7 @@ from cclib.parser.turbomoleparser import Turbomole
 from cclib.io import cjsonreader
 from cclib.io import cjsonwriter
 from cclib.io import cmlwriter
+from cclib.io import molcasorbwriter
 from cclib.io import moldenwriter
 from cclib.io import wfxwriter
 from cclib.io import xyzreader
@@ -110,6 +111,7 @@ writerclasses = {
     'json': cjsonwriter.CJSON,
     'cml': cmlwriter.CML,
     'molden': moldenwriter.MOLDEN,
+    'molcasorb': molcasorbwriter.MolcasOrb,
     'wfx': wfxwriter.WFXWriter,
     'xyz': xyzwriter.XYZ,
 }
