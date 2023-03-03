@@ -1,20 +1,31 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2023, the cclib development team
+#
+# This file is part of cclib (http://cclib.github.io) and is distributed under
+# the terms of the BSD 3-Clause License.
+
+"""A writer for Gaussian FChk files."""
+
 import numpy
+
+from cclib.io import filewriter
 from cclib.parser import utils
 
 SHELL_LABELS = "SPDFGHI"
 
-def write_scalar_record(f, name, value):
+def write_scalar_record(lines, name, value):
     if isinstance(value, (int, numpy.integer)):
-        f.write(f'{name:40s}   I     {value:12d}\n')
+        lines.append(f'{name:40s}   I     {value:12d}\n')
     elif isinstance(value, float):
-        f.write(f'{name:40s}   R     {value:22.15E}\n')
+        lines.append(f'{name:40s}   R     {value:22.15E}\n')
     elif isinstance(value, str):
         str_l = len(value)
         rec_l, remainder = divmod(str_l, 12)
         if remainder > 0:
             rec_l += 1
             value += ' ' * (12 - remainder)
-        f.write(f'{name:40s}   C   N={rec_l:12d}\n')
+        lines.append(f'{name:40s}   C   N={rec_l:12d}\n')
         while len(value) > 0:
             if len(value) > 60:
                 line = value[:60]
@@ -22,49 +33,71 @@ def write_scalar_record(f, name, value):
             else:
                 line = value
                 value = ""
-            print(line, file=f)
+            lines.append(line + '\n')
     else:
         raise ValueError(f"Unsupported type {type(value)}")
 
-def write_array_record(f, name, value):
+def write_array_record(lines, name, value):
     value = numpy.asarray(value)
     if numpy.issubdtype(value.dtype, numpy.floating):
-        f.write(f'{name:40s}   R   N={value.size:12d}\n')
+        lines.append(f'{name:40s}   R   N={value.size:12d}\n')
         data = numpy.array2string(value, max_line_width=81, separator=' ',
                 formatter={'all':lambda x: '%15.8E' % x})[1:-1]
-        f.write(f' {data}\n')
+        lines.append(f' {data}\n')
     elif numpy.issubdtype(value.dtype, numpy.integer):
-        f.write(f'{name:40s}   I   N={value.size:12d}\n')
+        lines.append(f'{name:40s}   I   N={value.size:12d}\n')
         data = numpy.array2string(value, max_line_width=73, separator=' ',
                 formatter={'all':lambda x: '%11d' % x})[1:-1]
-        f.write(f' {data}\n')
+        lines.append(f' {data}\n')
     else:
         raise ValueError(f"Unsupported dtype {value.dtype}")
 
-def write(filename, data, title=None, jobtype=None, method_name=None, basis_name=None):
-    with numpy.printoptions(threshold=numpy.inf):
-        with open(filename, 'w') as f:
+
+class FChk(filewriter.Writer):
+    """A writer for Gaussian FChk files."""
+
+    def __init__(self, ccdata, title=None, jobtype=None, method_name=None, basis_name=None, *args, **kwargs):
+        """Initialize the FChk writer object.
+
+        Inputs:
+          ccdata - An instance of ccData, parse from a logfile.
+        """
+        super().__init__(ccdata, *args, **kwargs)
+
+        self.title = title
+        self.jobtype = jobtype
+        self.method_name = method_name
+        self.basis_name = basis_name
+
+        self.required_attrs = ('natom', 'charge', 'mult', 'homos', 'nbasis', 'atomnos', 'atomcoords', 'aoqnums', 'gbasis', 'mocoeffs', 'moenergies')
+
+    def generate_repr(self):
+        data = self.ccdata
+        f = []
+        with numpy.printoptions(threshold=numpy.inf):
             try:
                 metadata = data.metadata
-                if method_name is None:
+                if self.method_name is None:
                     method_name = metadata.get('methods', [])
                     try:
                         method_name = method_name[-1]
                     except IndexError:
                         method_name = None
-                if basis_name is None:
+                if self.basis_name is None:
                     basis_name = metadata.get('basis_set', None)
             except AttributeError:
                 pass
+            title = self.title
             if title is None:
                 title = 'Untitled'
+            jobtype = self.jobtype
             if jobtype is None:
                 jobtype = 'SP'
             if method_name is None:
                 method_name = 'Unknown'
             if basis_name is None:
                 basis_name = 'Gen'
-            f.write(f'{title:72s}\n{jobtype:10s}{method_name:30s}{basis_name:30s}\n')
+            f.append(f'{title:72s}\n{jobtype:10s}{method_name:30s}{basis_name:30s}\n')
             write_scalar_record(f, 'Number of atoms', data.natom)
             write_scalar_record(f, 'Charge', data.charge)
             write_scalar_record(f, 'Multiplicity', data.mult)
@@ -125,17 +158,5 @@ def write(filename, data, title=None, jobtype=None, method_name=None, basis_name
             write_array_record(f, 'Alpha MO coefficients', mo_coeff[0].ravel())
             if len(mo_coeff) > 1:
                 write_array_record(f, 'Beta MO coefficients', mo_coeff[1].ravel())
+        return ''.join(f)
 
-
-if __name__ == '__main__':
-    import cclib
-    import sys
-
-    filename = sys.argv[1]
-    outname = sys.argv[2]
-
-    parser = cclib.io.ccopen(filename)
-
-    data = parser.parse()
-
-    write(outname, data)
