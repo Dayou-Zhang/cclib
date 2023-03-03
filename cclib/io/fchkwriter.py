@@ -75,22 +75,24 @@ class FChk(filewriter.Writer):
         data = self.ccdata
         f = []
         with numpy.printoptions(threshold=numpy.inf):
+            method_name = self.method_name
+            title = self.title
+            jobtype = self.jobtype
+            basis_name = self.basis_name
             try:
                 metadata = data.metadata
-                if self.method_name is None:
+                if method_name is None:
                     method_name = metadata.get('methods', [])
                     try:
                         method_name = method_name[-1]
                     except IndexError:
                         method_name = None
-                if self.basis_name is None:
+                if basis_name is None:
                     basis_name = metadata.get('basis_set', None)
             except AttributeError:
                 pass
-            title = self.title
             if title is None:
                 title = 'Untitled'
-            jobtype = self.jobtype
             if jobtype is None:
                 jobtype = 'SP'
             if method_name is None:
