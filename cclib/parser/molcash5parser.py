@@ -82,9 +82,7 @@ class MolcasH5:
         self._set_from_attr('SPINMULT', 'mult', True)
         self._set_from_dataset('AO_OVERLAP_MATRIX', 'aooverlaps', (data.nbasis, data.nbasis))
         self._set_from_dataset('BASIS_FUNCTION_IDS', 'aoqnums')
-        data.aoqnums = data.aoqnums[:, [0,2,3,1]]
         data.aoqnums[:, 0] -= 1
-        data.aoqnums[:, 3] -= 1
         self._set_from_dataset('CENTER_ATNUMS', 'atomnos')
         data.natom = len(data.atomnos)
         self._set_from_dataset('CENTER_COORDINATES', 'atomcoords')

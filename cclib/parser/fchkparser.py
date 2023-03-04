@@ -357,7 +357,7 @@ class FChk(logfileparser.Logfile):
         orbitals = _shell_to_orbitals(shell_types[0], shell_offset)
         aonames = [f"{atom_labels[atom]}_{x}" for x in orbitals]
         atombasis = [list(range(len(orbitals)))]
-        aoqnums = [(atom, 0, 0, 0)]
+        aoqnums = [(atom, 1, 0, 0)]
         nprimitives_iter = iter(nprimitives)
         exponents_iter = iter(exponents)
         contraction_iter = iter(contraction)
@@ -393,7 +393,7 @@ class FChk(logfileparser.Logfile):
             aonames.extend([f"{atom_labels[atom]}_{x}" for x in orbitals])
             atombasis[-1].extend(list(range(basis_offset, basis_offset + len(orbitals))))
             for ml in SHELL_ML[_type]:
-                aoqnums.append((atom, abs(_type), ml, shell_offset))
+                aoqnums.append((atom, shell_offset + 1, abs(_type), ml))
 
         assert (
             len(aonames) == self.nbasis
