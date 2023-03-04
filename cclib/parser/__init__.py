@@ -22,6 +22,7 @@ from cclib.parser.gamessukparser import GAMESSUK
 from cclib.parser.gaussianparser import Gaussian
 from cclib.parser.jaguarparser import Jaguar
 from cclib.parser.molcasparser import Molcas
+from cclib.parser.molcash5parser import MolcasH5
 from cclib.parser.molproparser import Molpro
 from cclib.parser.mopacparser import MOPAC
 from cclib.parser.nwchemparser import NWChem

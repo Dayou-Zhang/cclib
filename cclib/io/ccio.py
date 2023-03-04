@@ -28,6 +28,7 @@ from cclib.parser.gamessukparser import GAMESSUK
 from cclib.parser.gaussianparser import Gaussian
 from cclib.parser.jaguarparser import Jaguar
 from cclib.parser.molcasparser import Molcas
+from cclib.parser.molcash5parser import MolcasH5
 from cclib.parser.molproparser import Molpro
 from cclib.parser.mopacparser import MOPAC
 from cclib.parser.nwchemparser import NWChem
@@ -271,6 +272,10 @@ def ccopen(source, *args, **kwargs):
             except:
                 inputfile = io.StringIO(unicode(contents))
             inputfile.seek(0, 0)
+
+    # Special handling for HDF files
+    if hasattr(inputfile, "create_dataset"):
+        return MolcasH5(inputfile, *args, **kwargs)
 
     # Proceed to return an instance of the logfile parser only if the filetype
     # could be guessed. Need to make sure the input file is closed before creating

@@ -19,6 +19,11 @@ import sys
 import zipfile
 from abc import ABC, abstractmethod
 
+try:
+    import h5py
+except ImportError:
+    h5py = None
+
 import numpy
 
 from cclib.parser import utils
@@ -135,7 +140,7 @@ def openlogfile(filename, object=None):
     """
 
     # If there is a single string argument given.
-    if type(filename) in [str, str]:
+    if isinstance(filename, str):
 
         extension = os.path.splitext(filename)[1]
 
@@ -153,9 +158,19 @@ def openlogfile(filename, object=None):
             fileobject = myBZ2File(object, "r") if object else myBZ2File(filename, "r")
 
         else:
-            # Assuming that object is text file encoded in utf-8
-            fileobject = io.StringIO(object.decode('utf-8')) if object \
-                    else FileWrapper(io.open(filename, "r", errors='ignore'))
+            # Detect magic number
+            with open(filename, 'rb') as f:
+                magic = f.read(8)
+
+            if magic == b'\211HDF\r\n\032\n':
+                # HDF file
+                assert h5py is not None, "ERROR: module h5py cannot be imported"
+                fileobject = h5py.File(filename, 'r')
+
+            else:
+                # Assuming that object is text file encoded in utf-8
+                fileobject = io.StringIO(object.decode('utf-8')) if object \
+                        else FileWrapper(io.open(filename, "r", errors='ignore'))
 
         return fileobject
 
