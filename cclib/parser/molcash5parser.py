@@ -117,7 +117,7 @@ class MolcasH5:
         self._set_from_dataset('DESYM_CENTER_COORDINATES', 'atomcoords')
         data.atomcoords = [data.atomcoords]
         self._set_from_dataset('MO_ENERGIES', 'moenergies')
-        self.moenergies = [utils.convertor(data.moenergies[0], 'hartree', 'eV')]
+        data.moenergies = [utils.convertor(data.moenergies, 'hartree', 'eV')]
         self._set_from_dataset('MO_OCCUPATIONS', 'nooccnos')
         self._set_from_dataset('MO_VECTORS', 'nocoeffs')
         data.nocoeffs = self.unpack(data.nocoeffs, nbas, nbasis)

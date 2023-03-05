@@ -10,6 +10,7 @@
 import numpy
 
 from cclib.io import filewriter
+from cclib.parser import utils
 
 class MolcasOrb(filewriter.Writer):
     """A writer for OpenMolcas Orb files."""
@@ -41,7 +42,7 @@ class MolcasOrb(filewriter.Writer):
 {nbasis:8d}
 #ORB
 ''')
-            for n, i in enumerate(data.mocoeffs[0].T, 1):
+            for n, i in enumerate(data.mocoeffs[0], 1):
                 lines.append(f"* ORBITAL    1{n:5d}\n ")
                 lines.append(numpy.array2string(i, max_line_width=115, formatter={'float_kind':lambda x: "%21.14E" % x})[1:-1])
                 lines.append('\n')
@@ -58,6 +59,7 @@ class MolcasOrb(filewriter.Writer):
                 mo_energy = data.moenergies[0]
             except AttributeError:
                 mo_energy = numpy.zeros(nbasis)
+            mo_energy = utils.convertor(mo_energy, 'eV', 'hartree')
             lines.append('#ONE\n* ONE ELECTRON ENERGIES\n ')
             lines.append(numpy.array2string(mo_energy, max_line_width=122, formatter={'float_kind':lambda x: "%11.4E" % x})[1:-1])
             lines.append('\n')

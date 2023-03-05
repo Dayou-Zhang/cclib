@@ -55,6 +55,6 @@ def reorder_ao_by_qnums(data, ref_aoqnums):
     assert data.nbasis == len(ref_aoqnums)
     order = map_a_to_b(data.aoqnums, ref_aoqnums)
     _reorder_by_attr(data, 'mocoeffs', order, (False, True, False))
-    _reorder_by_attr(data, 'moenergies', order, (False, True))
+    _reorder_by_attr(data, 'aooverlaps', order, (True, True))
     return data
 
