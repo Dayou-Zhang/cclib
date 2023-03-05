@@ -43,6 +43,7 @@ class MolcasH5:
             if scalar:
                 value = value.item()
             self.data.metadata[dest_name] = value
+            return value
 
     def _set_from_attr(self, source_name, dest_name, scalar=False):
         value = self.h5.attrs.get(source_name, None)
@@ -50,6 +51,7 @@ class MolcasH5:
             if scalar:
                 value = value.item()
             setattr(self.data, dest_name, value)
+            return value
 
     def _set_from_dataset(self, source_name, dest_name, reshape=None):
         """reshape: tuple - reshape as shape
@@ -63,6 +65,27 @@ class MolcasH5:
             elif isinstance(reshape, tuple):
                 value = value.reshape(reshape)
             setattr(self.data, dest_name, value)
+            return value
+
+    def unpack(self, vector, nbas, nbasis):
+        """When symmetry is used, 2D matrix is stored as multiple
+        smaller square matrices. This method unpacks the condensed
+        form into a single (nbasis, nbasis) matrix."""
+        if len(nbas) == 1:
+            return vector.reshape((nbasis, nbasis))
+        # idxb? is the basis index in the square matrix
+        idxb0 = 0
+        # idxv? is the vector index
+        idxv0 = 0
+        matrix = numpy.zeros((nbasis, nbasis))
+        for l in nbas:
+            idxb1 = idxb0 + l
+            idxv1 = idxv0 + l * l
+            matrix[idxb0:idxb1, idxb0:idxb1] = vector[idxv0:idxv1].reshape((l, l))
+            idxb0 = idxb1
+            idxv0 = idxv1
+        assert idxv1 == len(vector), "Wrong size while unpacking"
+        return matrix
 
     def parse(self):
         h5 = self.h5
@@ -76,22 +99,39 @@ class MolcasH5:
         self._meta_from_attr('NACTEL', 'nactel', True)
         self._meta_from_attr('NROOTS', 'nroots', True)
         self._meta_from_attr('NSTATES', 'nstates', True)
-        self._meta_from_attr('NSYM', 'nsym', True)
-        print(data.metadata)
-        self._set_from_attr('NBAS', 'nbasis', True)
-        self._set_from_attr('SPINMULT', 'mult', True)
-        self._set_from_dataset('AO_OVERLAP_MATRIX', 'aooverlaps', (data.nbasis, data.nbasis))
+        nsym = self._meta_from_attr('NSYM', 'nsym', True)
+        nbas = self._meta_from_attr('NBAS', 'nbas')
+        nbasis = data.nbasis = nbas.sum().item()
+        self._set_from_dataset('AO_OVERLAP_MATRIX', 'aooverlaps')
+        data.aooverlaps = self.unpack(data.aooverlaps, nbas, nbasis)
         self._set_from_dataset('BASIS_FUNCTION_IDS', 'aoqnums')
+        self._set_from_dataset('DESYM_BASIS_FUNCTION_IDS', 'aoqnums')
         data.aoqnums[:, 0] -= 1
         self._set_from_dataset('CENTER_ATNUMS', 'atomnos')
+        self._set_from_dataset('DESYM_CENTER_ATNUMS', 'atomnos')
         data.natom = len(data.atomnos)
+        mult = self._set_from_attr('SPINMULT', 'mult', True)
+        if mult is None:
+            mult = data.mult = data.atomnos.sum().item() % 2 + 1
         self._set_from_dataset('CENTER_COORDINATES', 'atomcoords')
+        self._set_from_dataset('DESYM_CENTER_COORDINATES', 'atomcoords')
+        data.atomcoords = [data.atomcoords]
         self._set_from_dataset('MO_ENERGIES', 'moenergies')
-        self.moenergies = [data.moenergies[0]]
+        self.moenergies = [utils.convertor(data.moenergies[0], 'hartree', 'eV')]
         self._set_from_dataset('MO_OCCUPATIONS', 'nooccnos')
-        self._set_from_dataset('MO_VECTORS', 'nocoeffs', (data.nbasis, data.nbasis))
-        self.mocoeffs = [data.nocoeffs]
+        self._set_from_dataset('MO_VECTORS', 'nocoeffs')
+        data.nocoeffs = self.unpack(data.nocoeffs, nbas, nbasis)
+        data.mocoeffs = [data.nocoeffs]
+        self._set_from_dataset('ENERGY', 'scfenergies', (1,))
         self._set_from_dataset('ROOT_ENERGIES', 'scfenergies')
+        data.scfenergies = utils.convertor(data.scfenergies, 'hartree', 'eV')
+        data.charge = round(data.atomnos.sum() - data.nooccnos.sum())
+        nelec = round(data.nooccnos.sum())
+        homoa = (nelec + mult - 3) // 2
+        homob = homoa + 1 - mult
+        data.homos = (homoa, homob)
+        #TODO: implement basis set
+        data.gbasis = []
 
         del self.data
         return ccData(vars(data))
