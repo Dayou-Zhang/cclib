@@ -18,6 +18,8 @@ from cclib.parser import data
 from cclib.parser import logfileparser
 from cclib.parser import utils
 
+from collections import defaultdict
+
 SHELL_ORBITALS = {
      0: ['S'],
     -1: ['S', 'PX','PY','PZ'],
@@ -351,47 +353,33 @@ class FChk(logfileparser.Logfile):
         elements = (self.table.element[x] for x in self.atomnos)
         atom_labels = [f"{y}{x}" for x, y in enumerate(elements, 1)]
 
-        # get orbitals for first atom and start aonames and atombasis lists
-        atom = shell_map[0] - 1
-        shell_offset = 0
-        orbitals = _shell_to_orbitals(shell_types[0], shell_offset)
-        aonames = [f"{atom_labels[atom]}_{x}" for x in orbitals]
-        atombasis = [list(range(len(orbitals)))]
-        aoqnums = [(atom, 1, 0, 0)]
+        shell_offsets = defaultdict(lambda: -1)
+        aonames = []
+        atombasis = [[] for _ in atom_labels]
+        aoqnums = []
         nprimitives_iter = iter(nprimitives)
         exponents_iter = iter(exponents)
         contraction_iter = iter(contraction)
-        gshell = []
-        for _ in range(next(nprimitives_iter)):
-            gshell.append((next(exponents_iter), next(contraction_iter)))
-        gbasis = [[('S', gshell)]]
+        gbasis = [[] for _ in atom_labels]
 
-        # get rest
-        for i in range(1, len(shell_types)):
-            _type = shell_types[i]
-            atom = shell_map[i] - 1
-            shell_offset += 1
-            basis_offset = atombasis[-1][-1] + 1 # atombasis is increasing numbers, so just grab last
-
-            # if we've move to next atom, need to update offset of shells (e.g. start at 1S)
-            # and start new list for atom basis
-            if atom != shell_map[i - 1] - 1:
-                shell_offset = 0
-                atombasis.append([])
-                gbasis.append([])
-
-            # determine if we've changed shell type (e.g. from S to P)
-            if _type != shell_types[i - 1]:
-                shell_offset = 0
+        idx = 0
+        for _type, atom in zip(shell_types, shell_map):
+        #  for i in range(1, len(shell_types)):
+            #  _type = shell_types[i]
+            #  atom = shell_map[i] - 1
+            atom -= 1
+            shell_offsets[(atom, _type)] += 1
+            shell_offset = shell_offsets[(atom, _type)]
 
             gshell = []
             for _ in range(next(nprimitives_iter)):
                 gshell.append((next(exponents_iter), next(contraction_iter)))
-            gbasis[-1].append((SHELL_LABELS[abs(_type)], gshell))
+            gbasis[atom].append((SHELL_LABELS[abs(_type)], gshell))
 
             orbitals = _shell_to_orbitals(_type, shell_offset)
+            atombasis[atom].extend(range(idx, idx + len(orbitals)))
+            idx += len(orbitals)
             aonames.extend([f"{atom_labels[atom]}_{x}" for x in orbitals])
-            atombasis[-1].extend(list(range(basis_offset, basis_offset + len(orbitals))))
             for ml in SHELL_ML[_type]:
                 aoqnums.append((atom, shell_offset + 1, abs(_type), ml))
 
