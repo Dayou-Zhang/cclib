@@ -58,3 +58,21 @@ def reorder_ao_by_qnums(data, ref_aoqnums):
     _reorder_by_attr(data, 'aooverlaps', order, (True, True))
     return data
 
+def _calc_mo_overlap(mo1, mo2, s=None):
+    if s is None:
+        # approximate that all AOs are orthogonal
+        print('warning: AO overlap matrix missing. Assuming orthogonal AO basis')
+        return numpy.einsum("ai,bj->ab", mo1, mo2)
+    else:
+        return numpy.einsum("ai,ij,bj->ab", mo1, s, mo2)
+
+def reorder_mo_by_overlap(data, ref_data):
+    from scipy.optimize import linear_sum_assignment
+    try:
+        s = data.aooverlaps
+    except AttributeError:
+        s = None
+    mo_ovlp = _calc_mo_overlap(data.mocoeffs[0], ref_data.mocoeffs[0], s)
+    mo_ovlp *= mo_ovlp
+    return linear_sum_assignment(mo_ovlp, True)[1]
+
