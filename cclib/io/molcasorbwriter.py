@@ -52,11 +52,14 @@ class MolcasOrb(filewriter.Writer):
         if title is None:
             title = 'Untitled Orbital'
         lines = []
+        # orb_type = 0: natural orbital or RHF/RKS
+        # orb_type = 4: UHF/UKS
+        orb_type = 0 if len(data.mocoeffs) == 1 else 4
         with numpy.printoptions(threshold=numpy.inf):
             lines.append(f'''#INPORB 2.2
 #INFO
 * {title}
-       0       {nsym}       0
+       0       {nsym}       {orb_type}
 {nbas_str}
 {nbas_str}
 #ORB
@@ -67,6 +70,18 @@ class MolcasOrb(filewriter.Writer):
                 lines.append(f"* ORBITAL{s[0]:5d}{n:5d}\n ")
                 lines.append(numpy.array2string(i[s[1]:s[2]], max_line_width=115, formatter={'float_kind':lambda x: "%21.14E" % x})[1:-1])
                 lines.append('\n')
+
+            if orb_type == 4:
+                # UHF/UKS beta orbitals
+                ao_slices = generate_slices(nbas)
+                mo_id = generate_mo_id(nbas)
+                lines.append('#UORB\n')
+                for i in data.mocoeffs[1]:
+                    s = next(ao_slices)
+                    n = next(mo_id)
+                    lines.append(f"* ORBITAL{s[0]:5d}{n:5d}\n ")
+                    lines.append(numpy.array2string(i[s[1]:s[2]], max_line_width=115, formatter={'float_kind':lambda x: "%21.14E" % x})[1:-1])
+                    lines.append('\n')
 
             try:
                 mo_occ = data.nooccnos
@@ -80,6 +95,16 @@ class MolcasOrb(filewriter.Writer):
                 lines.append(numpy.array2string(i, max_line_width=115, formatter={'float_kind':lambda x: "%21.14E" % x})[1:-1])
                 lines.append('\n')
 
+            if orb_type == 4:
+                mo_occ = numpy.zeros(nbasis)
+                lines.append('#UOCC\n* Beta OCCUPATION NUMBERS\n')
+                for i in numpy.split(mo_occ, ao_splitter):
+                    if i.size == 0:
+                        continue
+                    lines.append(' ')
+                    lines.append(numpy.array2string(i, max_line_width=115, formatter={'float_kind':lambda x: "%21.14E" % x})[1:-1])
+                    lines.append('\n')
+
             try:
                 mo_energy = data.moenergies[0]
             except AttributeError:
@@ -92,5 +117,20 @@ class MolcasOrb(filewriter.Writer):
                 lines.append(' ')
                 lines.append(numpy.array2string(i, max_line_width=122, formatter={'float_kind':lambda x: "%11.4E" % x})[1:-1])
                 lines.append('\n')
+
+            if orb_type == 4:
+                try:
+                    mo_energy = data.moenergies[1]
+                except AttributeError:
+                    mo_energy = numpy.zeros(nbasis)
+                mo_energy = utils.convertor(mo_energy, 'eV', 'hartree')
+                lines.append('#UONE\n* beta ONE ELECTRON ENERGIES\n')
+                for i in numpy.split(mo_energy, ao_splitter):
+                    if i.size == 0:
+                        continue
+                    lines.append(' ')
+                    lines.append(numpy.array2string(i, max_line_width=122, formatter={'float_kind':lambda x: "%11.4E" % x})[1:-1])
+                    lines.append('\n')
+
         return ''.join(lines)
 
