@@ -26,7 +26,7 @@ def _check_pyscf(found_pyscf):
         raise ImportError("You must install `pyscf` to use this function")
 
 
-def makepyscf(data, charge=0, mult=1):
+def makepyscf(data, charge=None, mult=None):
     """Create a Pyscf Molecule."""
     _check_pyscf(_found_pyscf)
     inputattrs = data.__dict__
@@ -37,13 +37,19 @@ def makepyscf(data, charge=0, mult=1):
         raise MissingAttributeError(
             f"Could not create pyscf molecule due to missing attribute: {missing}"
         )
+    if charge is None and "charge" in inputattrs:
+        charge = data.charge
+
+    if mult is None and "mult" in inputattrs:
+        mult = data.mult
+
     mol = gto.Mole(
         atom=[
             [f"{data.atomnos[i]}", data.atomcoords[-1][i]] for i in range(data.natom)
         ],
         unit="Angstrom",
         charge=charge,
-        multiplicity=mult
+        spin=mult-1
     )
     inputattr = data.__dict__
     pt = PeriodicTable()
@@ -64,7 +70,7 @@ def makepyscf(data, charge=0, mult=1):
                 else:
                     basis[f"{pt.element[uatoms[idx]]}"].append(new_list)
         mol.basis = basis
-        mol.cart = True
+    mol.build()
     return mol
 
 def makepyscf_mos(ccdata,mol):
