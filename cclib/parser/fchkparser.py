@@ -350,6 +350,12 @@ class FChk(logfileparser.Logfile):
         next(inputfile)
         contraction = self._parse_block(inputfile, count2, float, 'Atomic Orbital Names')
 
+        # e.g. P(S=P) Contraction coefficients            R   N=          12
+        if next(inputfile).split()[0] == 'P(S=P)':
+            sp_contraction = self._parse_block(inputfile, count2, float, 'Atomic Orbital Names')
+        else:
+            sp_contraction = [0.] * count2
+
         elements = (self.table.element[x] for x in self.atomnos)
         atom_labels = [f"{y}{x}" for x, y in enumerate(elements, 1)]
 
@@ -360,6 +366,7 @@ class FChk(logfileparser.Logfile):
         nprimitives_iter = iter(nprimitives)
         exponents_iter = iter(exponents)
         contraction_iter = iter(contraction)
+        sp_contraction_iter = iter(sp_contraction)
         gbasis = [[] for _ in atom_labels]
 
         idx = 0
@@ -368,20 +375,37 @@ class FChk(logfileparser.Logfile):
             #  _type = shell_types[i]
             #  atom = shell_map[i] - 1
             atom -= 1
-            shell_offsets[(atom, _type)] += 1
-            shell_offset = shell_offsets[(atom, _type)]
+            shell_offsets[(atom, abs(_type))] += 1
+            shell_offset = shell_offsets[(atom, abs(_type))]
 
             gshell = []
-            for _ in range(next(nprimitives_iter)):
-                gshell.append((next(exponents_iter), next(contraction_iter)))
-            gbasis[atom].append((SHELL_LABELS[abs(_type)], gshell))
+            if _type == -1:
+                # special handling for SP
+                sp_shell = []
+                for _ in range(next(nprimitives_iter)):
+                    exponent = next(exponents_iter)
+                    gshell.append((exponent, next(contraction_iter)))
+                    sp_shell.append((exponent, next(sp_contraction_iter)))
+                gbasis[atom].append((SHELL_LABELS[0], gshell))
+                gbasis[atom].append((SHELL_LABELS[1], sp_shell))
+            else:
+                for _ in range(next(nprimitives_iter)):
+                    gshell.append((next(exponents_iter), next(contraction_iter)))
+                    next(sp_contraction_iter)
+                gbasis[atom].append((SHELL_LABELS[abs(_type)], gshell))
 
             orbitals = _shell_to_orbitals(_type, shell_offset)
             atombasis[atom].extend(range(idx, idx + len(orbitals)))
             idx += len(orbitals)
             aonames.extend([f"{atom_labels[atom]}_{x}" for x in orbitals])
-            for ml in SHELL_ML[_type]:
-                aoqnums.append((atom, shell_offset + 1, abs(_type), ml))
+            if _type == -1:
+                shell_offsets[(atom, 0)] += 1
+                aoqnums.append((atom, shell_offsets[(atom, 0)] + 1, 0, 0))
+                for ml in SHELL_ML[-1][1:]:
+                    aoqnums.append((atom, shell_offset + 1, 1, ml))
+            else:
+                for ml in SHELL_ML[_type]:
+                    aoqnums.append((atom, shell_offset + 1, abs(_type), ml))
 
         assert (
             len(aonames) == self.nbasis
