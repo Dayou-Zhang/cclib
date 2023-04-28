@@ -29,6 +29,7 @@ from cclib.parser.gaussianparser import Gaussian
 from cclib.parser.jaguarparser import Jaguar
 from cclib.parser.molcasparser import Molcas
 from cclib.parser.molcash5parser import MolcasH5
+from cclib.parser.moldenparser import Molden
 from cclib.parser.molproparser import Molpro
 from cclib.parser.mopacparser import MOPAC
 from cclib.parser.nwchemparser import NWChem
@@ -90,6 +91,7 @@ triggers = [
     (Gaussian,  ["Gaussian, Inc."],                                 True),
     (Jaguar,    ["Jaguar"],                                         True),
     (Molcas,    ["MOLCAS"],                                         True),
+    (Molden,    ["[Molden Format]"],                                True),
     (Molpro,    ["PROGRAM SYSTEM MOLPRO"],                          True),
     (Molpro,    ["1PROGRAM"],                                       False),
     (MOPAC,     ["MOPAC20"],                                        True),
@@ -139,6 +141,7 @@ def guess_filetype(inputfile):
                         return filetype
     else:
         for fname in inputfile:
+            inputfile.seek(0, 0)
             for line in inputfile:
                 for parser, phrases, do_break in triggers:
                     if all([line.lower().find(p.lower()) >= 0 for p in phrases]):

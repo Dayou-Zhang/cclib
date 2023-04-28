@@ -249,3 +249,15 @@ class WidthSplitter:
             while len(elements) and elements[-1] == '':
                 elements.pop()
         return elements
+
+SHELL_LABELS = "SPDFGHI"
+
+SHELL_L = {
+    'S': 0,
+    'P': 1,
+    'D': 2,
+    'F': 3,
+    'G': 4,
+    'H': 5,
+    'I': 6,
+}
