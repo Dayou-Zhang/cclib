@@ -52,7 +52,7 @@ def _reorder_by_attr(data, key, order, dim, crash_if_not_present=False, print_wa
 
 def reorder_ao_by_qnums(data, ref_aoqnums):
     data = copy.deepcopy(data)
-    assert data.nbasis == len(ref_aoqnums)
+    assert data.nbasis == len(ref_aoqnums), f'data has {data.nbasis} basis functions, but reference has {len(ref_aoqnums)}'
     order = map_a_to_b(data.aoqnums, ref_aoqnums)
     _reorder_by_attr(data, 'mocoeffs', order, (False, False, True))
     _reorder_by_attr(data, 'aooverlaps', order, (True, True))
