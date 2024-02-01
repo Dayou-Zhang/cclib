@@ -15,6 +15,7 @@ from cclib.parser import logfileparser
 from cclib.parser import utils
 from cclib.parser.data import ccData
 
+SHELL_LABELS = "SPDFGHI"
 
 class MolcasH5:
     """A Molcas H5 file."""
@@ -130,8 +131,28 @@ class MolcasH5:
         homoa = (nelec + mult - 3) // 2
         homob = homoa + 1 - mult
         data.homos = (homoa, homob)
-        #TODO: implement basis set
-        data.gbasis = []
+
+        primitives = h5['PRIMITIVES'][()]
+        primitive_ids = h5['PRIMITIVE_IDS'][()]
+        gbasis = []
+        old_atom = None
+        old_l_qn = None
+        old_contraction_id = None
+        for (exponent, coeff), (atom, l_qn, contraction_id) in zip(primitives, primitive_ids):
+            if old_atom != atom:
+                current_atom = []
+                gbasis.append(current_atom)
+                old_atom = atom
+                old_l_qn = None
+                old_contraction_id = None
+            if old_l_qn != l_qn or old_contraction_id != contraction_id:
+                current_contraction = []
+                current_atom.append((SHELL_LABELS[l_qn], current_contraction))
+                old_l_qn = l_qn
+                old_contraction_id = contraction_id
+            if coeff != 0.:
+                current_contraction.append((exponent, coeff))
+        data.gbasis = gbasis
 
         del self.data
         return ccData(vars(data))
