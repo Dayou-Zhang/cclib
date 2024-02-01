@@ -10,8 +10,6 @@
 from cclib.parser.utils import find_package, PeriodicTable, convertor
 import numpy as np
 
-l_sym2num = {"S": 0, "P": 1, "D": 2, "F": 3, "G": 4}
-
 
 class MissingAttributeError(Exception):
     pass
@@ -19,6 +17,7 @@ class MissingAttributeError(Exception):
 _found_pyscf = find_package("pyscf")
 if _found_pyscf:
     from pyscf import gto
+    from pyscf.lib.parameters import REAL_SPHERIC, ANGULARMAP
 
 
 def _check_pyscf(found_pyscf):
@@ -37,11 +36,18 @@ def makepyscf(data, charge=None, mult=None):
         raise MissingAttributeError(
             f"Could not create pyscf molecule due to missing attribute: {missing}"
         )
-    if charge is None and "charge" in inputattrs:
-        charge = data.charge
 
-    if mult is None and "mult" in inputattrs:
-        mult = data.mult
+    if charge is None:
+        if "charge" in inputattrs:
+            charge = data.charge
+        else:
+            charge = 0
+
+    if mult is None:
+        if "mult" in inputattrs:
+            mult = data.mult
+        else:
+            mult = 1
 
     mol = gto.Mole(
         atom=[
@@ -63,7 +69,7 @@ def makepyscf(data, charge=None, mult=None):
             for jdx, j in enumerate(curr_atom_basis):
                 curr_l = j[0]
                 curr_e_prim = j[1]
-                new_list = [l_sym2num[f"{curr_l}"]]
+                new_list = [ANGULARMAP[curr_l.lower()]]
                 new_list += curr_e_prim
                 if not f"{pt.element[uatoms[idx]]}" in basis:
                     basis[f"{pt.element[uatoms[idx]]}"] = [new_list]
@@ -121,5 +127,27 @@ def makepyscf_mos(ccdata,mol):
             else:
                 mo_syms = np.full_like(ccdata.moenergies, 'A', dtype=str)
     return mo_coeffs, mo_occ, mo_syms, mo_energies
+
+# pyscf: xyz -> -1 0 1 , cclib: xyz -> 1 -1 0
+P_ML_MAP = (-1, 0, 1)
+def get_aoqnums(mol):
+    if mol.cart:
+        raise ValueError('Cartesian basis not implemented')
+    atom_ids = []
+    n_list = []
+    l_list = []
+    ml_list = []
+    ao_labels = mol.ao_labels(False)
+    for iatom, _, ilabel, iang in ao_labels:
+        atom_ids.append(iatom)
+        l = ANGULARMAP[ilabel[-1]]
+        n = int(ilabel[:-1]) - l
+        ml = REAL_SPHERIC[l].index(iang) - l
+        if l == 1:
+            ml = P_ML_MAP[ml]
+        n_list.append(n)
+        l_list.append(l)
+        ml_list.append(ml)
+    return np.array([atom_ids, n_list, l_list, ml_list]).T
 
 del find_package
